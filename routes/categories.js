@@ -1,6 +1,8 @@
 var express = require('express');
 var router = express.Router();
 let categorySchema = require('../schemas/category');
+
+/* GET users listing. */
 router.get('/', async function(req, res, next) {
     try {
         let categories = await categorySchema.find({});

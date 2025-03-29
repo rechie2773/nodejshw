@@ -1,111 +1,53 @@
-const express = require('express');
-const router = express.Router();
-const User = require('../schemas/user');
-const Role = require('../schemas/role');
 
-// GET all with filter
-router.get('/', async (req, res) => {
-    try {
-        const { username, fullName, loginCountGte, loginCountLte } = req.query;
-        let filter = { isDeleted: false };
+var express = require('express');
+var router = express.Router();
+let userController = require('../controllers/users')
+let { CreateSuccessResponse, CreateErrorResponse } = require('../utils/responseHandler')
+let{check_authentication,check_authorization} = require('../utils/check_auth');
+const constants = require('../utils/constants');
+const { SignUpValidator, validate } = require('../utils/validator');
+/* GET users listing. */
 
-        if (username) {
-            filter.username = { $regex: username, $options: 'i' };
-        }
-        if (fullName) {
-            filter.fullName = { $regex: fullName, $options: 'i' };
-        }
-        if (loginCountGte || loginCountLte) {
-            filter.loginCount = {};
-            if (loginCountGte) filter.loginCount.$gte = parseInt(loginCountGte);
-            if (loginCountLte) filter.loginCount.$lte = parseInt(loginCountLte);
-        }
-
-        let users = await User.find(filter).populate('role');
-        res.send(users);
-    } catch (err) {
-        res.status(500).send({ success: false, message: err.message });
-    }
+router.get('/',check_authentication,check_authorization(constants.MOD_PERMISSION), async function (req, res, next) {
+  console.log(req.headers.authorization);
+  let users = await userController.GetAllUser();
+  CreateSuccessResponse(res, 200, users)
 });
-
-// GET by ID
-router.get('/:id', async (req, res) => {
-    try {
-        let user = await User.findById(req.params.id).populate('role');
-        if (!user || user.isDeleted) {
-            return res.status(404).send({ success: false, message: "User not found" });
-        }
-        res.send(user);
-    } catch (err) {
-        res.status(500).send({ success: false, message: err.message });
-    }
-});
-
-// CREATE
-router.post('/', async (req, res) => {
-    try {
-        const newUser = new User(req.body);
-        await newUser.save();
-        res.send({ success: true, data: newUser });
-    } catch (err) {
-        res.status(400).send({ success: false, message: err.message });
-    }
-});
-
-// UPDATE
-router.put('/:id', async (req, res) => {
-    try {
-        const updated = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.send({ success: true, data: updated });
-    } catch (err) {
-        res.status(400).send({ success: false, message: err.message });
-    }
-});
-
-// DELETE mềm
-router.delete('/:id', async (req, res) => {
-    try {
-        const deleted = await User.findByIdAndUpdate(req.params.id, { isDeleted: true }, { new: true });
-        res.send({ success: true, data: deleted });
-    } catch (err) {
-        res.status(500).send({ success: false, message: err.message });
-    }
-});
-// email + username verification
-router.post('/verify', async (req, res) => {
+router.post('/', async function (req, res, next) {
   try {
-      const { username, email } = req.body;
+    let body = req.body;
+    let newUser = await userController.CreateAnUser(body.username, body.password, body.email, body.role);
+    CreateSuccessResponse(res, 200, newUser)
+  } catch (error) {
+    CreateErrorResponse(res, 404, error.message)
+  }
+});
+router.put('/:id', async function (req, res, next) {
+  try {
+    let body = req.body;
+    let updatedResult = await userController.UpdateAnUser(req.params.id, body);
+    CreateSuccessResponse(res, 200, updatedResult)
+  } catch (error) {
+    next(error)
+  }
+});
+router.post('/', SignUpValidator, validate, async function (req, res, next) {
+  try {
+    let body = req.body;
+    let newUser = await userController.CreateAnUser(body.username, body.password, body.email, body.role);
+    CreateSuccessResponse(res, 200, newUser);
+  } catch (error) {
+    CreateErrorResponse(res, 404, error.message);
+  }
+});
 
-      if (!username || !email) {
-          return res.status(400).send({
-              success: false,
-              message: "Please provide username and email"
-          });
-      }
-
-      const user = await User.findOne({ username, email, isDeleted: false });
-
-      if (!user) {
-          return res.status(404).send({
-              success: false,
-              message: "Cannot find user with provided username and email"
-          });
-      }
-
-      user.status = true;
-      await user.save();
-
-      res.send({
-          success: true,
-          message: "User verified successfully",
-          data: user
-      });
-
-  } catch (err) {
-      res.status(500).send({
-          success: false,
-          message: err.message
-      });
+router.put('/:id', async function (req, res, next) {
+  try {
+    let body = req.body;
+    let updatedResult = await userController.UpdateAnUser(req.params.id, body);
+    CreateSuccessResponse(res, 200, updatedResult);
+  } catch (error) {
+    next(error);
   }
 });
 

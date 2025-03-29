@@ -4,6 +4,7 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var mongoose = require('mongoose')
+let { CreateSuccessResponse, CreateErrorResponse } = require('./utils/responseHandler')
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -25,11 +26,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/roles', require('./routes/roles'));
+
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/auth', require('./routes/auth'));
+app.use('/roles', require('./routes/roles'));
 app.use('/products', require('./routes/products'));
 app.use('/categories', require('./routes/categories'));
+
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
@@ -42,8 +46,10 @@ app.use(function(err, req, res, next) {
   res.locals.error = req.app.get('env') === 'development' ? err : {};
 
   // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+  CreateErrorResponse(res, err.status||500, err.message)
 });
+
+
+//
 
 module.exports = app;

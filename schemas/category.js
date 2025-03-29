@@ -13,3 +13,4 @@ let categorySchema = mongoose.Schema({
     timestamps:true
 })
 module.exports = mongoose.model('category',categorySchema)
+// Tao 1 schema cho obj category gồm name,description, timestamp

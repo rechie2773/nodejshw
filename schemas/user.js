@@ -1,10 +1,10 @@
-let mongoose = require('mongoose');
-
+let mongoose = require('mongoose')
+let bcrypt = require('bcrypt')
 let userSchema = new mongoose.Schema({
     username: {
         type: String,
-        unique: true,
-        required: true
+        unique: [true, "username da ton tai"],
+        required: [true, "username la truong bat buoc"],
     },
     password: {
         type: String,
@@ -12,10 +12,10 @@ let userSchema = new mongoose.Schema({
     },
     email: {
         type: String,
-        unique: true,
-        required: true
+        required: true,
+        unique: true
     },
-    fullName: {
+    fullname: {
         type: String,
         default: ""
     },
@@ -26,22 +26,38 @@ let userSchema = new mongoose.Schema({
     status: {
         type: Boolean,
         default: false
-    },
-    role: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'role'
-    },
-    loginCount: {
+    }, loginCount: {
         type: Number,
         default: 0,
         min: 0
+    }, role: {
+        type: mongoose.Types.ObjectId,
+        ref: 'role',
+        required: true
     },
-    isDeleted: {
-        type: Boolean,
-        default: false
-    }
+    resetPasswordToken: String,
+    resetPasswordTokenExp: Date
 }, {
     timestamps: true
-});
+})
+userSchema.pre('save', function (next) {
+    if (this.isModified('password')) {
+        let salt = bcrypt.genSaltSync(10);
+        let encrypted = bcrypt.hashSync(this.password, salt);
+        this.password = encrypted;
+    }
+    next();
+})
 
-module.exports = mongoose.model('user', userSchema);
+module.exports = mongoose.model('user', userSchema)
+/*
+username: string, unique, required
+password: string,required
+email: string, required, unique
+fullName:string, default: ""
+avatarUrl:string, default: ""
+status: boolean, default: false
+role: Role,
+loginCount: int, default:0, min=0
+timestamp
+*/
